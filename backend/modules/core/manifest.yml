@@ -1,0 +1,4 @@
+name: core
+version: 0.1.0
+entrypoint_api: modules.core.api
+api_prefix: /api/v1/core

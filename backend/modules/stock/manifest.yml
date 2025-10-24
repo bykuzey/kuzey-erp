@@ -1,0 +1,4 @@
+name: stock
+version: 0.1.0
+entrypoint_api: modules.stock.api
+api_prefix: /api/v1/stock

@@ -1,0 +1,4 @@
+name: partners
+version: 0.1.0
+entrypoint_api: modules.partners.api
+api_prefix: /api/v1/partners
