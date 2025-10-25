@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import List
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -14,7 +15,23 @@ class Settings(BaseSettings):
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
-    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    # Raw CORS origins string from env; parsed via property below to avoid pydantic-settings JSON decoding
+    cors_origins_raw: str = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+
+    @property
+    def cors_origins(self) -> List[str]:
+        s = (self.cors_origins_raw or "").strip()
+        if not s:
+            return []
+        # Try JSON list first
+        try:
+            j = json.loads(s)
+            if isinstance(j, list):
+                return [str(x).strip() for x in j if str(x).strip()]
+        except Exception:
+            pass
+        # Fallback to CSV parsing
+        return [item.strip() for item in s.split(",") if item.strip()]
 
     @property
     def database_url(self) -> str:

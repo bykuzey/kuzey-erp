@@ -29,3 +29,17 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+def try_get_user_id_from_request(request) -> Optional[int]:
+    auth = request.headers.get("authorization")
+    if not auth or not auth.lower().startswith("bearer "):
+        return None
+    token = auth.split(" ", 1)[1]
+    payload = decode_token(token)
+    if not payload:
+        return None
+    try:
+        return int(payload.get("sub"))
+    except Exception:
+        return None

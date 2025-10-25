@@ -17,7 +17,7 @@ docker compose up --build -d
 Servisler:
 - Backend: http://localhost:8000 (API Docs: http://localhost:8000/docs)
 - Frontend (Vite dev): http://localhost:5173
-- PostgreSQL: localhost:5432
+- PostgreSQL: localhost:55432 (host port) → container içi 5432
 
 İlk kullanımda backend tablo oluşturma otomatik yapılır (SQLAlchemy create_all). Alembic iskeleti dahildir, daha sonra versiyonlu migration akışına geçebilirsiniz.
 

@@ -44,6 +44,16 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     return user
 
 
+def require_roles(*allowed_roles: str):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
+        return wrapper
+    return decorator
+
+
 @router.get("/auth/me", response_model=schemas.UserOut)
 def me(current=Depends(get_current_user)):
     return current

@@ -1,8 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from sqlalchemy import text
 from . import models, schemas
 
 router = APIRouter(tags=["stock"])
@@ -23,6 +24,37 @@ def create_product(item: schemas.ProductCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(obj)
     return obj
+
+
+@router.get("/products/{product_id}", response_model=schemas.ProductOut)
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    obj = db.get(models.Product, product_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return obj
+
+
+@router.put("/products/{product_id}", response_model=schemas.ProductOut)
+def update_product(product_id: int, item: schemas.ProductCreate, db: Session = Depends(get_db)):
+    obj = db.get(models.Product, product_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Product not found")
+    for k, v in item.model_dump().items():
+        setattr(obj, k, v)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+@router.delete("/products/{product_id}", status_code=204)
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    obj = db.get(models.Product, product_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db.delete(obj)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/locations", response_model=List[schemas.StockLocationOut])
@@ -54,3 +86,58 @@ def create_move(item: schemas.StockMoveCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(obj)
     return obj
+
+
+@router.get("/moves/{move_id}", response_model=schemas.StockMoveOut)
+def get_move(move_id: int, db: Session = Depends(get_db)):
+    obj = db.get(models.StockMove, move_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Move not found")
+    return obj
+
+
+@router.put("/moves/{move_id}", response_model=schemas.StockMoveOut)
+def update_move(move_id: int, item: schemas.StockMoveCreate, db: Session = Depends(get_db)):
+    obj = db.get(models.StockMove, move_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Move not found")
+    for k, v in item.model_dump().items():
+        setattr(obj, k, v)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+@router.delete("/moves/{move_id}", status_code=204)
+def delete_move(move_id: int, db: Session = Depends(get_db)):
+    obj = db.get(models.StockMove, move_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Move not found")
+    db.delete(obj)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.get("/balances", response_model=dict)
+def list_balances(db: Session = Depends(get_db)):
+    # Compute product balances across all locations: sum(to_qty) - sum(from_qty)
+    sql = (
+        "SELECT product_id, "
+        "COALESCE(SUM(CASE WHEN to_location_id IS NOT NULL THEN qty ELSE 0 END),0) - "
+        "COALESCE(SUM(CASE WHEN from_location_id IS NOT NULL THEN qty ELSE 0 END),0) as qty "
+        "FROM stock_moves GROUP BY product_id"
+    )
+    res = db.execute(text(sql)).all()
+    return {row[0]: float(row[1]) for row in res}
+
+
+@router.get("/balances/product/{product_id}")
+def get_balance(product_id: int, db: Session = Depends(get_db)):
+    sql = (
+        "SELECT COALESCE(SUM(CASE WHEN to_location_id IS NOT NULL THEN qty ELSE 0 END),0) - "
+        "COALESCE(SUM(CASE WHEN from_location_id IS NOT NULL THEN qty ELSE 0 END),0) as qty "
+        "FROM stock_moves WHERE product_id = :pid"
+    )
+    row = db.execute(text(sql), {"pid": product_id}).first()
+    return {"product_id": product_id, "qty": float(row[0] if row and row[0] is not None else 0)}

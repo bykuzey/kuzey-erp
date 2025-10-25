@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -30,11 +30,11 @@ def get_partner(partner_id: int, db: Session = Depends(get_db)):
     return obj
 
 
-@router.delete("/{partner_id}")
-def delete_partner(partner_id: int, db: Session = Depends(get_db)):
+@router.delete("/{partner_id}", status_code=204, responses={404: {"description": "Partner not found"}})
+def delete_partner(partner_id: int, db: Session = Depends(get_db)) -> Response:
     obj = db.get(models.Partner, partner_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Partner not found")
     db.delete(obj)
     db.commit()
-    return {"status": "deleted"}
+    return Response(status_code=204)
